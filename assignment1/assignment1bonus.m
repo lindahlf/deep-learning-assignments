@@ -1,11 +1,10 @@
 %% Load data 
 clear all; close all; clc
-% Use all avaliable data
 
+% Using all avaliable data
 trainX = zeros(3072,10000*5);
 trainY = zeros(10, 10000*5);
 trainy = zeros(10000*5,1);
-
 
 for i = 1:5
     filename = sprintf('data_batch_%d.mat', i);
@@ -52,7 +51,7 @@ testX = testX ./ repmat(std_X, [1, size(testX, 2)]);
 rng(400);
 W = 0.01.*randn(K, d);
 b = 0.01.*randn(K,1);
-gi
+
 %% Performing mini-batch step
 
 % Setting minibatch parameters
@@ -60,10 +59,12 @@ lambda = 0.1;
 n_epochs = 40;
 n_batch = 100;
 eta = 0.001;
+decay = 0.95;
 
 GDparams.nbatch = n_batch;
 GDparams.eta = eta;
 GDparams.nepochs = n_epochs;
+GDparams.decay = decay;
 
 % Mini-batch step
 [Wstar, bstar, trainloss, valloss] = MiniBatchGD(trainX, trainY, validX, validY, ...

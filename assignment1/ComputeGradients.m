@@ -17,8 +17,5 @@ dLb = (1/n)*(G*ones(n,1));
 
 grad_W = dLW + 2*lambda*W;
 grad_b = dLb;
-
-
-
 end
 

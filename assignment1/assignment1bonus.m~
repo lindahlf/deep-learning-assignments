@@ -1,3 +1,96 @@
+%% Functions
+function P = EvaluateClassifier(X, W, b)
+% Each column of X corresponds to an image and has size dxn where d is the
+% dimension of the image and n is the number of images
+% W and b are the parameters of the network
+% Returns P which contains the probability for each label for the image in
+% the corresponding column of X. Has size Kxn
+
+s = W*X + b;
+exponent = exp(s);
+P = exponent./sum(exponent,1);
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+function acc = ComputeAccuracy(X, y, W, b)
+% Each column of X corresponds to an image, X is dxn
+% y is the vector of ground truth values of length n
+% Returns the scalar value acc containing the accuracy
+
+P = EvaluateClassifier(X,W,b);
+% Recall that y contains the true label of the data
+
+[~,I] = max(P,[],1);
+match = I == y';
+
+acc = sum(match)/length(y);
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+function [Wstar, bstar, losstrain, lossval] = MiniBatchGD(X, Y, Xval, Yval, GDparams, W, b, lambda)
+% X contains all the n training images, with dimension d, dxn. 
+% Y contains all the labels for the n training images, Kxn,
+% W and b are initial parameters, they have sizes Kxd and Kx1
+% respectively.
+% GDparams is an object containing the parameter values n_batch,
+% eta and n_epochs, denoting the size of the mini-batches, the learning
+% rate and the number of runs through the whole training set, respectively.
+% Lambda is the regularization parameter
+% Returns Wstar and bstar. 
+
+n_batch = GDparams.nbatch;
+eta = GDparams.eta;
+n_epochs = GDparams.nepochs;
+decay = GDparams.decay;
+
+[~, n] = size(X);
+W_curr = W; b_curr = b;
+
+losstrain = zeros(1,n_epochs);
+lossval = zeros(1,n_epochs);
+
+for i = 1:n_epochs
+    % Generate set of mini-batches
+    disp(['Current epoch: ', num2str(i)])
+    perm = randperm(n);
+    % Shuffle the dataset
+    X = X(:,perm);
+    Y = Y(:,perm);
+    for j = 1:n/n_batch
+        j_start = (j-1)*n_batch + 1;
+        j_end = j*n_batch;
+        inds = j_start:j_end;
+        Xbatch = X(:, inds); 
+        Ybatch = Y(:, inds);
+        Pbatch = EvaluateClassifier(Xbatch, W_curr, b_curr);
+        
+        [grad_b, grad_W] = ComputeGradients(Xbatch, Ybatch, Pbatch, W_curr, lambda);
+        
+        b_curr = b_curr - eta*grad_b;
+        W_curr = W_curr - eta*grad_W;
+    end
+    
+    losstrain(i) = ComputeCost(X, Y, W_curr, b_curr, lambda);
+    lossval(i) = ComputeCost(Xval, Yval, W_curr, b_curr, lambda);
+    eta = decay*eta;
+end
+
+Wstar = W_curr;
+bstar = b_curr;
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+
+
 %% Load data 
 clear all; close all; clc
 % Use all avaliable data
@@ -6,22 +99,21 @@ trainX = zeros(3072,10000*5);
 trainY = zeros(10, 10000*5);
 trainy = zeros(10000*5,1);
 
-
 for i = 1:5
     filename = sprintf('data_batch_%d.mat', i);
     [fooX, fooY, fooy] = LoadBatch(filename);
     trainX(:,(1+(i-1)*10000:i*10000)) = fooX;
     trainY(:,(1+(i-1)*10000:i*10000)) = fooY;
-    trainy((1+(i-1)*10000:i*10000),1) = fooy;
+    trainy((1+(i-1)*10000:i*10000),:) = fooy;
 end
 
 validX = trainX(:,49001:end); 
 validY = trainY(:,49001:end); 
-validy = trainy(:,49001:end);
+validy = trainy(49001:end,:);
 
 trainX = trainX(:,1:49000);
 trainY = trainY(:,1:49000);
-trainy = trainy(:,1:49000);
+trainy = trainy(1:49000,:);
 
 [testX, testY, testy] = LoadBatch('test_batch.mat');
 
@@ -56,14 +148,16 @@ b = 0.01.*randn(K,1);
 %% Performing mini-batch step
 
 % Setting minibatch parameters
-lambda = 0;
+lambda = 0.1;
 n_epochs = 40;
 n_batch = 100;
-eta = 0.1;
+eta = 0.001;
+decay = 0.95;
 
 GDparams.nbatch = n_batch;
 GDparams.eta = eta;
 GDparams.nepochs = n_epochs;
+GDparams.decay = decay;
 
 % Mini-batch step
 [Wstar, bstar, trainloss, valloss] = MiniBatchGD(trainX, trainY, validX, validY, ...

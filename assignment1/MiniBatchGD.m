@@ -12,6 +12,7 @@
 n_batch = GDparams.nbatch;
 eta = GDparams.eta;
 n_epochs = GDparams.nepochs;
+decay = GDparams.decay;
 
 [~, n] = size(X);
 W_curr = W; b_curr = b;
@@ -23,6 +24,7 @@ for i = 1:n_epochs
     % Generate set of mini-batches
     disp(['Current epoch: ', num2str(i)])
     perm = randperm(n);
+    % Shuffle the dataset
     X = X(:,perm);
     Y = Y(:,perm);
     for j = 1:n/n_batch
@@ -41,7 +43,7 @@ for i = 1:n_epochs
     
     losstrain(i) = ComputeCost(X, Y, W_curr, b_curr, lambda);
     lossval(i) = ComputeCost(Xval, Yval, W_curr, b_curr, lambda);
-    
+    eta = decay*eta; % Add decay
 end
 
 Wstar = W_curr;
