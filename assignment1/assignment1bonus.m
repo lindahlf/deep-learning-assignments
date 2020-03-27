@@ -76,3 +76,52 @@ acc_val = ComputeAccuracy(validX,validy, Wstar, bstar);
 acc_test = ComputeAccuracy(testX,testy, Wstar, bstar);
 
 
+%% Plotting cost function
+epoch = (1:1:n_epochs);
+plot(epoch, trainloss, epoch, valloss, 'LineWidth', 1.5)
+title({'Training and validation loss for each epoch',...
+    ['lambda = ' num2str(lambda)],...
+    ['nbatch = ' num2str(n_batch)], ['eta = ' num2str(eta)],...
+    ['nepochs = ' num2str(n_epochs)], ...
+    ['decay = ' num2str(decay)]})
+xlabel('Epochs')
+ylabel('Loss')
+legend('Training loss', 'Validation loss', 'FontSize', 20)
+set(gca,'FontSize',20)
+set(gcf, 'Position',  [100, 100, 1000, 1000]);
+filename = sprintf('bonus_lambda%0.5gnepochs%0.5gnbatch%0.5geta%0.5g.png', lambda, n_epochs, n_batch,eta);
+saveas(gcf,filename)
+%% Displaying the learnt weight matrix
+
+% Visualize templates
+for i = 1:10
+    im = reshape(Wstar(i,:), 32, 32, 3);
+    s_im{i} = (im - min(im(:))) / (max(im(:)) - min(im(:)));
+    s_im{i} = permute(s_im{i}, [2, 1, 3]);
+    
+end
+
+% Assembling images
+for i = 1:10
+    subplot(2,5,i)
+    imagesc(s_im{i})
+    set(gca,'XTick',[], 'YTick', [])
+    title(label_names{i})
+end
+
+set(gcf, 'Position',  [100, 100, 2000, 500]);
+filename = sprintf('bonus_weight_lambda%0.5gnepochs%0.5gnbatch%0.5geta%0.5g.png', lambda, n_epochs, n_batch,eta);
+sgtitle({'Learnt weight matrix for each class',...
+    ['lambda = ' num2str(lambda)],...
+    ['nbatch = ' num2str(n_batch)], ['eta = ' num2str(eta)],...
+    ['nepochs = ' num2str(n_epochs)], ...
+    ['decay = ' num2str(decay)]})
+saveas(gcf,filename)
+
+
+    
+
+
+
+
+
