@@ -19,3 +19,4 @@ else % One-hot ground truth label
     J = 1/n*sum(-log(sum(Y.*P))) + lambda*norm(W,'fro')^2;  
 end
 
+end

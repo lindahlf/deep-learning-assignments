@@ -1,4 +1,5 @@
 %% Functions
+
 function P = EvaluateClassifier(X, W, b)
 % Each column of X corresponds to an image and has size dxn where d is the
 % dimension of the image and n is the number of images
@@ -9,11 +10,31 @@ function P = EvaluateClassifier(X, W, b)
 s = W*X + b;
 exponent = exp(s);
 P = exponent./sum(exponent,1);
+
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function J = ComputeCost(X, Y, W, b, lambda)
+% Size dxn where each column of X corresponds to an image
+% Each column of Y is either the Kxn one-hot ground truth label for
+% corresponding column of X or is simply the 1xn vector of ground truth
+% labels.
+% Returns a scalar J corresponding the sum of the loss of the network's
+% predictions for the images in X relative to the ground truth labels and
+% the regularization term on W 
 
+
+P = EvaluateClassifier(X,W,b);
+
+[~,n] = size(X);
+
+if ismember(0,Y) == 0 % 1xn 
+    idx = sub2ind(size(P), Y, (1:1:n)');
+    J = 1/n*sum(-log(P(idx))) + lambda*norm(W,'fro')^2;
+else % One-hot ground truth label
+    J = 1/n*sum(-log(sum(Y.*P))) + lambda*norm(W,'fro')^2;  
+end
+
+end
 
 function acc = ComputeAccuracy(X, y, W, b)
 % Each column of X corresponds to an image, X is dxn
@@ -27,10 +48,29 @@ P = EvaluateClassifier(X,W,b);
 match = I == y';
 
 acc = sum(match)/length(y);
+
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [grad_b,grad_W] = ComputeGradients(X, Y, P, W, lambda)
+% Each column of X corresponds to an image and it has size dxn
+% Each column of Y (K×n) is the one-hot ground truth label for the 
+% corresponding column of X
+% Each column of P contains the probability for each label for the image in
+% the corresponding column of X. P has size Kxn
+% Returns grad_W and grad_b which are the gradient matrix of the cost J
+% relative to W and b respectively. They have size Kxd and Kx1
+% respectively.
+
+
+[~,n] = size(X);
+G = -(Y-P);
+
+dLW = (1/n)*(G*X');
+dLb = (1/n)*(G*ones(n,1));
+
+grad_W = dLW + 2*lambda*W;
+grad_b = dLb;
+end
 
 function [Wstar, bstar, losstrain, lossval] = MiniBatchGD(X, Y, Xval, Yval, GDparams, W, b, lambda)
 % X contains all the n training images, with dimension d, dxn. 
@@ -77,24 +117,17 @@ for i = 1:n_epochs
     
     losstrain(i) = ComputeCost(X, Y, W_curr, b_curr, lambda);
     lossval(i) = ComputeCost(Xval, Yval, W_curr, b_curr, lambda);
-    eta = decay*eta;
+    eta = decay*eta; % Add decay
 end
 
 Wstar = W_curr;
 bstar = b_curr;
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
-
-
-
 %% Load data 
 clear all; close all; clc
-% Use all avaliable data
 
+% Using all avaliable data
 trainX = zeros(3072,10000*5);
 trainY = zeros(10, 10000*5);
 trainy = zeros(10000*5,1);
@@ -167,5 +200,55 @@ GDparams.decay = decay;
 acc_train = ComputeAccuracy(trainX,trainy, Wstar,bstar);
 acc_val = ComputeAccuracy(validX,validy, Wstar, bstar);
 acc_test = ComputeAccuracy(testX,testy, Wstar, bstar);
+
+
+%% Plotting cost function
+epoch = (1:1:n_epochs);
+plot(epoch, trainloss, epoch, valloss, 'LineWidth', 1.5)
+title({'Training and validation loss for each epoch',...
+    ['lambda = ' num2str(lambda)],...
+    ['nbatch = ' num2str(n_batch)], ['eta = ' num2str(eta)],...
+    ['nepochs = ' num2str(n_epochs)], ...
+    ['decay = ' num2str(decay)]})
+xlabel('Epochs')
+ylabel('Loss')
+legend('Training loss', 'Validation loss', 'FontSize', 20)
+set(gca,'FontSize',20)
+set(gcf, 'Position',  [100, 100, 1000, 1000]);
+filename = sprintf('bonus_lambda%0.5gnepochs%0.5gnbatch%0.5geta%0.5g.png', lambda, n_epochs, n_batch,eta);
+saveas(gcf,filename)
+%% Displaying the learnt weight matrix
+
+% Visualize templates
+for i = 1:10
+    im = reshape(Wstar(i,:), 32, 32, 3);
+    s_im{i} = (im - min(im(:))) / (max(im(:)) - min(im(:)));
+    s_im{i} = permute(s_im{i}, [2, 1, 3]);
+    
+end
+
+% Assembling images
+for i = 1:10
+    subplot(2,5,i)
+    imagesc(s_im{i})
+    set(gca,'XTick',[], 'YTick', [])
+    title(label_names{i})
+end
+
+set(gcf, 'Position',  [100, 100, 2000, 500]);
+filename = sprintf('bonus_weight_lambda%0.5gnepochs%0.5gnbatch%0.5geta%0.5g.png', lambda, n_epochs, n_batch,eta);
+sgtitle({'Learnt weight matrix for each class',...
+    ['lambda = ' num2str(lambda)],...
+    ['nbatch = ' num2str(n_batch)], ['eta = ' num2str(eta)],...
+    ['nepochs = ' num2str(n_epochs)], ...
+    ['decay = ' num2str(decay)]})
+saveas(gcf,filename)
+
+
+    
+
+
+
+
 
 

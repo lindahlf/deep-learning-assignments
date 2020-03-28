@@ -32,14 +32,7 @@ rng(400);
 W = 0.01.*randn(K, d);
 b = 0.01.*randn(K,1);
 
-%% Test of functions
-
-% Testing cost function
-J1 = ComputeCost(trainX,trainy,W,b,5);
-J2 = ComputeCost(trainX,trainY,W,b,5);
-
-% Test accuracy function 
-acc = ComputeAccuracy(trainX,trainy, W,b);
+%% Testing the gradients
 
 % Getting an understanding for the gradients
 [gradbslow, gradwslow] = ComputeGradsNumSlow(trainX(1:20,1), trainY(:,1), W(:, 1:20), b, 0, 1e-06);
@@ -74,7 +67,9 @@ GDparams.nepochs = n_epochs;
 acc_train = ComputeAccuracy(trainX,trainy, Wstar,bstar);
 acc_val = ComputeAccuracy(validX,validy, Wstar, bstar);
 acc_test = ComputeAccuracy(testX,testy, Wstar, bstar);
+
 %% Plotting cost function
+
 epoch = (1:1:n_epochs);
 plot(epoch, trainloss, epoch, valloss, 'LineWidth', 1.5)
 title({'Training and validation loss for each epoch',...
@@ -88,6 +83,7 @@ set(gca,'FontSize',20)
 set(gcf, 'Position',  [100, 100, 1000, 1000]);
 filename = sprintf('lambda%0.5gnepochs%0.5gnbatch%0.5geta%0.5g.png', lambda, n_epochs, n_batch,eta);
 % saveas(gcf,filename)
+
 %% Displaying the learnt weight matrix
 
 % Visualize templates
