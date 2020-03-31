@@ -1,4 +1,4 @@
-% clear all; close all; clc
+clear all; close all; clc
 
 % Load data 
 [trainX,trainY,trainy] = LoadBatch('data_batch_1.mat');
@@ -24,13 +24,14 @@ validX = validX ./ repmat(std_X, [1, size(validX, 2)]);
 testX = testX - repmat(mean_X, [1, size(testX, 2)]);
 testX = testX ./ repmat(std_X, [1, size(testX, 2)]);
 
-% Initialize W and b 
+% Initialize parameters  
 [K, ~] = size(trainY);
 [d,n] = size(trainX);
+nodes = 50; 
+bias = 0;
 
-rng(400);
-W = 0.01.*randn(K, d);
-b = 0.01.*randn(K,1);
+[W,b] = initParams(nodes, d, K, bias);
+
 
 %% Testing the gradients
 

@@ -1,0 +1,15 @@
+function [dW1, dW2, db1, db2] = ComputeGradients(Y,P,h,W2)
+
+
+
+G = -(Y-P);
+
+db2 = g;
+
+dW2 = g'*h' + 2*lambda*W2;
+
+g = g*W2;
+g = g*diag(
+
+end
+
