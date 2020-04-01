@@ -9,8 +9,8 @@ W1 = W{1}; W2 = W{2};
 b1 = b{1}; b2 = b{2};
 
 s1 = W1*X + b1; 
-h = max(0,s1);
-s = W2*h + b2;
+H = max(0,s1);
+s = W2*H + b2;
 exponent = exp(s);
 P = exponent./sum(exponent,1);
 end

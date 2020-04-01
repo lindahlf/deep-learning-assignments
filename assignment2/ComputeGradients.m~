@@ -1,15 +1,20 @@
-function [dW1, dW2, db1, db2] = ComputeGradients(Y,P,h,W2)
+function [dW1, dW2, db1, db2] = ComputeGradients(X,Y,W,b)
 
+[P,H] = EvalClassifier(X,W,b);
 
+[~,n] = size(Y);
 
 G = -(Y-P);
 
-db2 = g;
+db2 = (1/n)*G*ones(n,1);
+dW2 = (1/n)*G*H';
 
-dW2 = g'*h' + 2*lambda*W2;
+G = W2'*G;
+Ind = H > 0;
+G = G.*Ind;
 
-g = g*W2;
-g = g*diag(
+dW1 = (1/n)*G*X';
+db1 = (1/n)*G*ones(n,1);
 
 end
 
