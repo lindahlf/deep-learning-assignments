@@ -1,3 +1,8 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%% Functions are found at the end of this script %%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Import data
 clear all; close all; clc
 
 % Load data 
@@ -98,10 +103,8 @@ eta = [etaup, etadown];
 
 W_curr = W; b_curr = b;
 
-
-cost_train = zeros(11,1); loss_train = zeros(11,1); acc_train = zeros
-cost_valid = zeros(11,1); loss_valid = zeros(11,1);
-
+cost_train = zeros(11,1); loss_train = zeros(11,1); acc_train = zeros(11,1);
+cost_valid = zeros(11,1); loss_valid = zeros(11,1); acc_valid = zeros(11,1);
 
 plotidx = 1;
 
@@ -124,18 +127,19 @@ for t = 0:2*ns-1
     W_curr{2} = W_curr{2} - eta(t+1)*gradW{2};
     
     % Recording values every 100th iteration to plot for sanity check
-    if mod(t,100) == 0        
+    if mod(t,100) == 0
+        
     [costtrain, losstrain] = ComputeCost(trainX,trainY, W_curr, b_curr, lambda); 
     [costvalid, lossvalid] = ComputeCost(validX,validY, W_curr, b_curr, lambda);
 
     cost_train(plotidx) = costtrain; loss_train(plotidx) = losstrain;
     cost_valid(plotidx) = costvalid; loss_valid(plotidx) = lossvalid;
     
+    acc_train(plotidx) = ComputeAccuracy(trainX,trainy, W_curr, b_curr); 
+    acc_valid(plotidx) = ComputeAccuracy(validX,validy, W_curr, b_curr); 
     
-          
     plotidx = plotidx + 1;
     end
-    
 end 
 
 [costtrain, losstrain] = ComputeCost(trainX,trainY, W_curr, b_curr, lambda); 
@@ -143,6 +147,12 @@ end
 
 cost_train(plotidx) = costtrain; loss_train(plotidx) = losstrain;
 cost_valid(plotidx) = costvalid; loss_valid(plotidx) = lossvalid; 
+
+acc_train(plotidx) = ComputeAccuracy(trainX,trainy, W_curr, b_curr); 
+acc_valid(plotidx) = ComputeAccuracy(validX,validy, W_curr, b_curr); 
+
+% Compute final test accuracy
+acc_valid = ComputeAccuracy(testX,testy, W_curr, b_curr); 
 
 % Figures of cost, loss and accuracy
 figure
@@ -165,73 +175,353 @@ title('Loss plot')
 set(gca,'FontSize',20)
 set(gcf, 'Position',  [100, 100, 1000, 1000]);
 
-
-
-
-%% Performing mini-batch step
-
-% Setting minibatch parameters
-lambda = 0.1;
-n_epochs = 40;
-n_batch = 100;
-eta = 0.001;
-
-GDparams.nbatch = n_batch;
-GDparams.eta = eta;
-GDparams.nepochs = n_epochs;
-
-% Mini-batch step
-[Wstar, bstar, trainloss, valloss] = MiniBatchGD(trainX, trainY, validX, validY, ...
-    GDparams, W, b, lambda);
-
-% Computing accuracies
-acc_train = ComputeAccuracy(trainX,trainy, Wstar,bstar);
-acc_val = ComputeAccuracy(validX,validy, Wstar, bstar);
-acc_test = ComputeAccuracy(testX,testy, Wstar, bstar);
-
-%% Plotting cost function
-
-epoch = (1:1:n_epochs);
-plot(epoch, trainloss, epoch, valloss, 'LineWidth', 1.5)
-title({'Training and validation loss for each epoch',...
-    ['lambda = ' num2str(lambda)],...
-    ['nbatch = ' num2str(n_batch)], ['eta = ' num2str(eta)],...
-    ['nepochs = ' num2str(n_epochs)]})
-xlabel('Epochs')
-ylabel('Loss')
-legend('Training loss', 'Validation loss', 'FontSize', 20)
+figure 
+plot(0:100:2*ns, acc_train, 0:100:2*ns, acc_valid, 'LineWidth', 1.5)
+xlabel('update step')
+ylabel('accuracy')
+ylim([0,0.7])
+legend('training', 'validation')
+title('Accuracy plot')
 set(gca,'FontSize',20)
 set(gcf, 'Position',  [100, 100, 1000, 1000]);
-filename = sprintf('lambda%0.5gnepochs%0.5gnbatch%0.5geta%0.5g.png', lambda, n_epochs, n_batch,eta);
-% saveas(gcf,filename)
 
-%% Displaying the learnt weight matrix
+%% Training network for real 
 
-% Visualize templates
-for i = 1:10
-    im = reshape(Wstar(i,:), 32, 32, 3);
-    s_im{i} = (im - min(im(:))) / (max(im(:)) - min(im(:)));
-    s_im{i} = permute(s_im{i}, [2, 1, 3]);
+rng(400)
+[W,b] = initParams(nodes, d, K, bias);
+[~, n] = size(trainX);
+
+eta_min = 1e-5; eta_max = 1e-1; ns = 800;
+nbatch = 100; lambda = 0.01;
+
+% Generating values for eta
+etaup = eta_min + linspace(0, eta_max - eta_min, ns); % increasing part
+etadown = eta_max - linspace(0, eta_max - eta_min, ns); % decreasing part
+cycles = 2;
+eta = [etaup, etadown];
+eta = repmat(eta,1,cycles);
+
+W_curr = W; b_curr = b;
+
+cost_train = zeros(11,1); loss_train = zeros(11,1); acc_train = zeros(11,1);
+cost_valid = zeros(11,1); loss_valid = zeros(11,1); acc_valid = zeros(11,1);
+
+plotidx = 1;
+
+for t = 0:2*ns*cycles-1
+    % Generating batch
+    j = mod(t,n/nbatch) + 1; 
+    j_start = (j-1)*nbatch + 1;
+    j_end = j*nbatch;
+    inds = j_start:j_end;
+    Xbatch = trainX(:, inds); 
+    Ybatch = trainY(:, inds);
     
+    [gradb, gradW] = ComputeGradients(Xbatch,Ybatch,W_curr,b_curr,lambda);
+    
+    % Updating b and W 
+    b_curr{1} = b_curr{1} - eta(t+1)*gradb{1};
+    b_curr{2} = b_curr{2} - eta(t+1)*gradb{2};
+    
+    W_curr{1} = W_curr{1} - eta(t+1)*gradW{1};
+    W_curr{2} = W_curr{2} - eta(t+1)*gradW{2};
+    
+    % Recording values every 480th iteration to plot for sanity check
+    if mod(t,480) == 0
+        
+    [costtrain, losstrain] = ComputeCost(trainX,trainY, W_curr, b_curr, lambda); 
+    [costvalid, lossvalid] = ComputeCost(validX,validY, W_curr, b_curr, lambda);
+
+    cost_train(plotidx) = costtrain; loss_train(plotidx) = losstrain;
+    cost_valid(plotidx) = costvalid; loss_valid(plotidx) = lossvalid;
+    
+    acc_train(plotidx) = ComputeAccuracy(trainX,trainy, W_curr, b_curr); 
+    acc_valid(plotidx) = ComputeAccuracy(validX,validy, W_curr, b_curr); 
+    
+    plotidx = plotidx + 1;
+    end
+end 
+
+[costtrain, losstrain] = ComputeCost(trainX,trainY, W_curr, b_curr, lambda); 
+[costvalid, lossvalid] = ComputeCost(validX,validY, W_curr, b_curr, lambda);
+
+cost_train(plotidx) = costtrain; loss_train(plotidx) = losstrain;
+cost_valid(plotidx) = costvalid; loss_valid(plotidx) = lossvalid; 
+
+acc_train(plotidx) = ComputeAccuracy(trainX,trainy, W_curr, b_curr); 
+acc_valid(plotidx) = ComputeAccuracy(validX,validy, W_curr, b_curr); 
+
+% Compute final test accuracy
+acc_test = ComputeAccuracy(testX,testy, W_curr, b_curr); 
+
+% Figures of cost, loss and accuracy
+figure
+plot(0:480:2*ns*cycles,cost_train, 0:480:2*ns*cycles,cost_valid, 'LineWidth', 1.5)
+xlabel('update step')
+ylabel('cost')
+ylim([0,4])
+legend('training', 'validation')
+title('Cost plot')
+set(gca,'FontSize',20)
+set(gcf, 'Position',  [100, 100, 1000, 1000]);
+
+figure
+plot(0:480:2*ns*cycles,loss_train, 0:480:2*ns*cycles,loss_valid, 'LineWidth', 1.5)
+xlabel('update step')
+ylabel('loss')
+ylim([0,4])
+legend('training', 'validation')
+title('Loss plot')
+set(gca,'FontSize',20)
+set(gcf, 'Position',  [100, 100, 1000, 1000]);
+
+figure
+plot(0:480:2*ns*cycles, acc_train, 0:480:2*ns*cycles, acc_valid, 'LineWidth', 1.5)
+xlabel('update step')
+ylabel('accuracy')
+ylim([0,0.7])
+legend('training', 'validation')
+title('Accuracy plot')
+set(gca,'FontSize',20)
+set(gcf, 'Position',  [100, 100, 1000, 1000]);
+
+
+%% Coarse search to set lambda
+clear all; close all; clc
+
+% Using all avaliable data
+trainX = zeros(3072,10000*5);
+trainY = zeros(10, 10000*5);
+trainy = zeros(10000*5,1);
+disp('Loading data')
+for i = 1:5
+    disp('...')
+    filename = sprintf('data_batch_%d.mat', i);
+    [fooX, fooY, fooy] = LoadBatch(filename);
+    trainX(:,(1+(i-1)*10000:i*10000)) = fooX;
+    trainY(:,(1+(i-1)*10000:i*10000)) = fooY;
+    trainy((1+(i-1)*10000:i*10000),:) = fooy;
 end
 
-% Assembling images
-for i = 1:10
-    subplot(2,5,i)
-    imagesc(s_im{i})
-    set(gca,'XTick',[], 'YTick', [])
-    title(label_names{i})
+% Reserve 5000 images for validation
+validX = trainX(:,45001:end); 
+validY = trainY(:,45001:end); 
+validy = trainy(45001:end,:);
+
+trainX = trainX(:,1:45000);
+trainY = trainY(:,1:45000);
+trainy = trainy(1:45000,:);
+
+[testX, testY, testy] = LoadBatch('test_batch.mat');
+
+disp('Preparing data...')
+% Compute mean of training data 
+mean_X = mean(trainX, 2); 
+std_X = std(trainX, 0, 2);
+
+% Normalize data
+trainX = trainX - repmat(mean_X, [1, size(trainX, 2)]);
+trainX = trainX ./ repmat(std_X, [1, size(trainX, 2)]);
+
+
+validX = validX - repmat(mean_X, [1, size(validX, 2)]);
+validX = validX ./ repmat(std_X, [1, size(validX, 2)]);
+
+testX = testX - repmat(mean_X, [1, size(testX, 2)]);
+testX = testX ./ repmat(std_X, [1, size(testX, 2)]);
+
+disp('Setting parameters')
+% Setting parameters
+[K, ~] = size(trainY);
+[d,n] = size(trainX);
+nodes = 50; 
+bias = 0;
+
+rng(400)
+[W,b] = initParams(nodes, d, K, bias);
+[P,H] = EvalClassifier(trainX, W, b);
+
+% Cyclical mini-batch parameters
+eta_min = 1e-5; eta_max = 1e-1; 
+nbatch = 100; cycles = 2;
+ns = 2*floor(n/nbatch);
+
+% Lambda search parameters
+l_min = -5; l_max = -1;
+no_values = 8;
+l = linspace(l_min, l_max, no_values);
+lambda = 10.^l;
+
+parameters.eta_min = eta_min; parameters.eta_max = eta_max;
+parameters.ns = ns; parameters.nbatch = nbatch; 
+parameters.cycles = cycles;
+
+acc_valid = zeros(1, no_values);
+
+disp('Performing grid search')
+for i = 1:length(lambda)
+    disp('...')
+    parameters.lambda = lambda(i); 
+    [Wstar, bstar] = MiniBatch(trainX, trainY, W, b, parameters);
+    acc_valid(i) = ComputeAccuracy(validX,validy, Wstar, bstar);
 end
 
-set(gcf, 'Position',  [100, 100, 2000, 500]);
-filename = sprintf('weight_lambda%0.5gnepochs%0.5gnbatch%0.5geta%0.5g.png', lambda, n_epochs, n_batch,eta);
-sgtitle({'Learnt weight matrix for each class',...
-    ['lambda = ' num2str(lambda)],...
-    ['nbatch = ' num2str(n_batch)], ['eta = ' num2str(eta)],...
-    ['nepochs = ' num2str(n_epochs)]})
-% saveas(gcf,filename)
-
-
+T = table(lambda',acc_valid');
+writetable(T,'gridSearch.txt','Delimiter',' ')  
+type 'gridSearch.txt'
     
 
+%% Random search to set lambda 
+
+disp('Setting parameters')
+% Setting parameters
+[K, ~] = size(trainY);
+[d,n] = size(trainX);
+nodes = 50; 
+bias = 0;
+
+rng(400)
+[W,b] = initParams(nodes, d, K, bias);
+[P,H] = EvalClassifier(trainX, W, b);
+
+% Cyclical mini-batch parameters
+eta_min = 1e-5; eta_max = 1e-1; 
+nbatch = 100; cycles = 3;
+ns = 2*floor(n/nbatch);
+
+
+% Lambda search parameters
+% Interval based on best performance from coarse search
+l_min = log10(0.0019307); l_max = log10(0.00193068); 
+no_values = 8;
+l = l_min + (l_max-l_min)*rand(1,no_values);
+lambda = 10.^l;
+
+parameters.eta_min = eta_min; parameters.eta_max = eta_max;
+parameters.ns = ns; parameters.nbatch = nbatch; 
+parameters.cycles = cycles;
+
+acc_valid = zeros(1, no_values);
+
+disp('Performing random search')
+for i = 1:length(lambda)
+    disp('...')
+    parameters.lambda = lambda(i); 
+    [Wstar, bstar] = MiniBatch(trainX, trainY, W, b, parameters);
+    acc_valid(i) = ComputeAccuracy(validX,validy, Wstar, bstar);
+end
+
+T = table(lambda',acc_valid');
+writetable(T,'randomSearch.txt','Delimiter',' ')  
+type 'randomSearch.txt'
+
+%% Final training
+clear all; close all; clc
+
+% Using all avaliable data
+trainX = zeros(3072,10000*5);
+trainY = zeros(10, 10000*5);
+trainy = zeros(10000*5,1);
+disp('Loading data')
+for i = 1:5
+    disp('...')
+    filename = sprintf('data_batch_%d.mat', i);
+    [fooX, fooY, fooy] = LoadBatch(filename);
+    trainX(:,(1+(i-1)*10000:i*10000)) = fooX;
+    trainY(:,(1+(i-1)*10000:i*10000)) = fooY;
+    trainy((1+(i-1)*10000:i*10000),:) = fooy;
+end
+
+% Reserve 1000 images for validation
+validX = trainX(:,49001:end); 
+validY = trainY(:,49001:end); 
+validy = trainy(49001:end,:);
+
+trainX = trainX(:,1:49000);
+trainY = trainY(:,1:49000);
+trainy = trainy(1:49000,:);
+
+[testX, testY, testy] = LoadBatch('test_batch.mat');
+
+disp('Preparing data...')
+% Compute mean of training data 
+mean_X = mean(trainX, 2); 
+std_X = std(trainX, 0, 2);
+
+% Normalize data
+trainX = trainX - repmat(mean_X, [1, size(trainX, 2)]);
+trainX = trainX ./ repmat(std_X, [1, size(trainX, 2)]);
+
+
+validX = validX - repmat(mean_X, [1, size(validX, 2)]);
+validX = validX ./ repmat(std_X, [1, size(validX, 2)]);
+
+testX = testX - repmat(mean_X, [1, size(testX, 2)]);
+testX = testX ./ repmat(std_X, [1, size(testX, 2)]);
+
+disp('Setting parameters')
+
+% Setting parameters
+[K, ~] = size(trainY);
+[d,n] = size(trainX);
+nodes = 50; 
+bias = 0;
+
+% Initializing weights and nodes 
+rng(400)
+[W,b] = initParams(nodes, d, K, bias);
+[P,H] = EvalClassifier(trainX, W, b);
+
+% Cyclical mini-batch parameters
+eta_min = 1e-5; eta_max = 1e-1; 
+nbatch = 100; cycles = 4;
+ns = 2*floor(n/nbatch); lambda = 0.00193069772888325;
+
+parameters.eta_min = eta_min; parameters.eta_max = eta_max;
+parameters.ns = ns; parameters.nbatch = nbatch; 
+parameters.cycles = cycles; parameters.lambda = lambda;
+
+disp('Performing mini-batch...')
+[Wstar, bstar, losstrain, lossvalid] = MiniBatch(trainX, trainY, validX, validY, ...
+    W, b, parameters);
+
+% Final test accuracy 
+acc_test = ComputeAccuracy(testX,testy, Wstar, bstar);
+
+plot(0:2*ns*cycles/10:2*ns*cycles,losstrain, 0:2*ns*cycles/10:2*ns*cycles,lossvalid, 'LineWidth', 1.5)
+xlabel('update step')
+ylabel('loss')
+legend('training', 'validation')
+title('Loss plot')
+set(gca,'FontSize',20)
+set(gcf, 'Position',  [100, 100, 1000, 1000]);
+
+
+%% Functions 
+function [J,loss] = ComputeCost(X, Y, W, b, lambda)
+% Size dxn where each column of X corresponds to an image
+% Each column of Y is either the Kxn one-hot ground truth label for
+% corresponding column of X or is simply the 1xn vector of ground truth
+% labels.
+% Returns a scalar J corresponding the sum of the loss of the network's
+% predictions for the images in X relative to the ground truth labels and
+% the regularization term on W 
+
+
+P = EvalClassifier(X,W,b);
+
+W1 = W{1}; W2 = W{2}; 
+
+[~,n] = size(X);
+
+if ismember(0,Y) == 0 % 1xn 
+    idx = sub2ind(size(P), Y, (1:1:n)');
+    loss = 1/n*sum(-log(P(idx)));
+    J = loss + lambda*(norm(W1,'fro')^2 + norm(W2,'fro')^2);
+else % One-hot ground truth label
+    loss = 1/n*sum(-log(sum(Y.*P)));
+    J = loss + lambda*(norm(W1,'fro')^2 + norm(W2,'fro')^2);
+end
+
+end
 
