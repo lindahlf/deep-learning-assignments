@@ -1,9 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%% Functions are found at the end of this script %%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 clear all; close all; clc
-
 % Load data 
 [trainX,trainY,trainy] = LoadBatch('data_batch_1.mat');
 [validX,validY,validy] = LoadBatch('data_batch_2.mat');
@@ -21,7 +19,6 @@ std_X = std(trainX, 0, 2);
 trainX = trainX - repmat(mean_X, [1, size(trainX, 2)]);
 trainX = trainX ./ repmat(std_X, [1, size(trainX, 2)]);
 
-
 validX = validX - repmat(mean_X, [1, size(validX, 2)]);
 validX = validX ./ repmat(std_X, [1, size(validX, 2)]);
 
@@ -37,7 +34,6 @@ bias = 0;
 rng(400)
 [W,b] = initParams(nodes, d, K, bias);
 [P,H] = EvalClassifier(trainX, W, b);
-
 
 %% Testing the gradients
 
@@ -60,6 +56,7 @@ errorW2 = norm(grad_W{2}  - own_gradw{2})/max(eps,norm(own_gradw{2})+norm(grad_W
 
 %% Trying to overfit training data to check gradient
 
+% Initialzing parameters
 rng(400)
 [W,b] = initParams(nodes, d, K, bias);
 
@@ -78,6 +75,7 @@ for i = 1:epochs
     valcost(i) = ComputeCost(validX, validY, W, b, 0);
 end
 
+% Plotting results
 plot((1:1:epochs),cost, (1:1:epochs), valcost, 'LineWidth', 1.5)
 title('Overfitting network to check gradient')
 legend('Training data', 'Validation data')
@@ -88,6 +86,7 @@ set(gcf, 'Position',  [100, 100, 1000, 1000]);
 
 %% Training network using cyclical learning rates
 
+% Setting parameters
 rng(400)
 [W,b] = initParams(nodes, d, K, bias);
 [~, n] = size(trainX);
@@ -102,6 +101,7 @@ eta = [etaup, etadown];
 
 W_curr = W; b_curr = b;
 
+% Initializing arrays to record cost and loss 
 cost_train = zeros(11,1); loss_train = zeros(11,1); acc_train = zeros(11,1);
 cost_valid = zeros(11,1); loss_valid = zeros(11,1); acc_valid = zeros(11,1);
 
@@ -186,6 +186,7 @@ set(gcf, 'Position',  [100, 100, 1000, 1000]);
 
 %% Training network for real 
 
+% Initializing parameters
 rng(400)
 [W,b] = initParams(nodes, d, K, bias);
 [~, n] = size(trainX);
@@ -322,7 +323,6 @@ std_X = std(trainX, 0, 2);
 trainX = trainX - repmat(mean_X, [1, size(trainX, 2)]);
 trainX = trainX ./ repmat(std_X, [1, size(trainX, 2)]);
 
-
 validX = validX - repmat(mean_X, [1, size(validX, 2)]);
 validX = validX ./ repmat(std_X, [1, size(validX, 2)]);
 
@@ -365,11 +365,11 @@ for i = 1:length(lambda)
     acc_valid(i) = ComputeAccuracy(validX,validy, Wstar, bstar);
 end
 
+% Save results to file 
 T = table(lambda',acc_valid');
 writetable(T,'gridSearch.txt','Delimiter',' ')  
 type 'gridSearch.txt'
-    
-
+ 
 %% Random search to set lambda 
 
 disp('Setting parameters')
@@ -410,6 +410,7 @@ for i = 1:length(lambda)
     acc_valid(i) = ComputeAccuracy(validX,validy, Wstar, bstar);
 end
 
+% Save results to file 
 T = table(lambda',acc_valid');
 writetable(T,'randomSearch.txt','Delimiter',' ')  
 type 'randomSearch.txt'
@@ -421,6 +422,7 @@ clear all; close all; clc
 trainX = zeros(3072,10000*5);
 trainY = zeros(10, 10000*5);
 trainy = zeros(10000*5,1);
+
 disp('Loading data')
 for i = 1:5
     disp('...')
@@ -443,6 +445,7 @@ trainy = trainy(1:49000,:);
 [testX, testY, testy] = LoadBatch('test_batch.mat');
 
 disp('Preparing data...')
+
 % Compute mean of training data 
 mean_X = mean(trainX, 2); 
 std_X = std(trainX, 0, 2);
@@ -451,7 +454,6 @@ std_X = std(trainX, 0, 2);
 trainX = trainX - repmat(mean_X, [1, size(trainX, 2)]);
 trainX = trainX ./ repmat(std_X, [1, size(trainX, 2)]);
 
-
 validX = validX - repmat(mean_X, [1, size(validX, 2)]);
 validX = validX ./ repmat(std_X, [1, size(validX, 2)]);
 
@@ -459,7 +461,6 @@ testX = testX - repmat(mean_X, [1, size(testX, 2)]);
 testX = testX ./ repmat(std_X, [1, size(testX, 2)]);
 
 disp('Setting parameters')
-
 % Setting parameters
 [K, ~] = size(trainY);
 [d,n] = size(trainX);
@@ -494,7 +495,6 @@ legend('training', 'validation')
 title('Loss plot')
 set(gca,'FontSize',20)
 set(gcf, 'Position',  [100, 100, 1000, 1000]);
-
 
 %% Functions 
 
