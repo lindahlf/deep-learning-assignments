@@ -1,0 +1,321 @@
+clear all; close all; clc
+% Load data 
+[trainX,trainY,trainy] = LoadBatch('data_batch_1.mat');
+[validX,validY,validy] = LoadBatch('data_batch_2.mat');
+[testX, testY, testy] = LoadBatch('test_batch.mat');
+labels = load('batches.meta.mat');
+label_names = labels.label_names;
+
+% Compute mean of training data 
+mean_X = mean(trainX, 2); 
+std_X = std(trainX, 0, 2);
+
+% Normalize data
+trainX = trainX - repmat(mean_X, [1, size(trainX, 2)]);
+trainX = trainX ./ repmat(std_X, [1, size(trainX, 2)]);
+
+validX = validX - repmat(mean_X, [1, size(validX, 2)]);
+validX = validX ./ repmat(std_X, [1, size(validX, 2)]);
+
+testX = testX - repmat(mean_X, [1, size(testX, 2)]);
+testX = testX ./ repmat(std_X, [1, size(testX, 2)]);
+
+%% Using all avaliable data
+clear all; close all; clc
+trainX = zeros(3072,10000*5);
+trainY = zeros(10, 10000*5);
+trainy = zeros(10000*5,1);
+disp('Loading data')
+for i = 1:5
+    disp('...')
+    filename = sprintf('data_batch_%d.mat', i);
+    [fooX, fooY, fooy] = LoadBatch(filename);
+    trainX(:,(1+(i-1)*10000:i*10000)) = fooX;
+    trainY(:,(1+(i-1)*10000:i*10000)) = fooY;
+    trainy((1+(i-1)*10000:i*10000),:) = fooy;
+end
+
+% Reserve 5000 images for validation
+validX = trainX(:,45001:end); 
+validY = trainY(:,45001:end); 
+validy = trainy(45001:end,:);
+
+trainX = trainX(:,1:45000);
+trainY = trainY(:,1:45000);
+trainy = trainy(1:45000,:);
+
+[testX, testY, testy] = LoadBatch('test_batch.mat');
+disp('Done')
+
+% Compute mean of training data 
+mean_X = mean(trainX, 2); 
+std_X = std(trainX, 0, 2);
+
+% Normalize data
+trainX = trainX - repmat(mean_X, [1, size(trainX, 2)]);
+trainX = trainX ./ repmat(std_X, [1, size(trainX, 2)]);
+
+validX = validX - repmat(mean_X, [1, size(validX, 2)]);
+validX = validX ./ repmat(std_X, [1, size(validX, 2)]);
+
+testX = testX - repmat(mean_X, [1, size(testX, 2)]);
+testX = testX ./ repmat(std_X, [1, size(testX, 2)]);
+
+%%Initialize constants
+
+% Initialize parameters  
+[K, ~] = size(trainY); % K = number of labels
+[d,n] = size(trainX);
+nodes = [50 K]; % number of nodes in each layer
+bias = 0; 
+k = length(nodes);
+
+rng(400)
+[W,b] = initParams(k, nodes, n, d, bias);
+[P,H] = EvalClassifier(trainX, W, b);
+
+%% Testing gradients
+grad_test_X = trainX(1:10,1:2); grad_test_Y = trainY(:,1:2);
+
+% Initialize parameters  
+[K, ~] = size(grad_test_Y); % K = number of labels
+[d,n] = size(grad_test_X);
+nodes = [50 50 20 K]; % number of nodes in each layer
+bias = 0; 
+k = length(nodes);
+
+rng(400)
+[W,b] = initParams(k, nodes, n, d, bias);
+
+lambda = 0;
+
+[gradb, gradW] = ComputeGradients(grad_test_X,grad_test_Y,W,b,lambda);
+
+NetParams.W = W; NetParams.b = b; NetParams.use_bn = false;
+Grads = ComputeGradsNumSlow(grad_test_X, grad_test_Y, NetParams, lambda, 1e-05);
+gradbRef = Grads.b; gradWRef = Grads.W;
+
+% Check error
+eps = 1e-10;
+layer = 1;
+
+errorb = norm(gradbRef{layer}  - gradb{layer})/max(eps,norm(gradb{layer})+norm(gradbRef{layer}));
+errorW = norm(gradWRef{layer}  - gradW{layer})/max(eps,norm(gradW{layer})+norm(gradWRef{layer}));
+
+%% Trying to replicate results from assignment 2
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% Make sure to load data before running this section %%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% Initialize parameters  
+[K, ~] = size(trainY); % K = number of labels
+[d,n] = size(trainX);
+nodes = [50 30 20 20 10 10 10 10 K]; % number of nodes in each layer
+bias = 0; 
+k = length(nodes);
+
+rng(400)
+[W,b] = initParams(k, nodes, n, d, bias);
+
+% Set mini-batch parameters
+eta_min = 1e-5; eta_max = 1e-1; nbatch = 100; 
+ns = 5*45000/nbatch; lambda = 0.005; cycles = 2;
+
+% Store mini-batch parameters
+parameters.eta_min = eta_min; parameters.eta_max = eta_max;
+parameters.ns = ns; parameters.nbatch = nbatch; 
+parameters.cycles = cycles; parameters.lambda = lambda;
+
+[Wstar,bstar, losstrain, lossvalid] = MiniBatch(trainX, trainY, validX, validY, W, b, parameters);
+
+acc_test = ComputeAccuracy(testX,testy, Wstar, bstar); 
+
+% Plotting evolution of loss function
+plot(1:1:length(losstrain),losstrain, 1:1:length(lossvalid),lossvalid, 'LineWidth', 1.5)
+grid on
+xlabel('update step')
+ylabel('loss')
+ylim([0,3])
+legend('training', 'validation', 'Fontsize',30)
+title('Loss function - 9-layer network w/o batch normalization')
+set(gca,'FontSize',30)
+set(gcf, 'Position',  [100, 100, 1000, 700]);
+saveas(gcf,[pwd '/Resultpics/9layerregular.png']);
+
+%% Playground for batch norm
+
+grad_test_X = trainX(1:20,1:3); grad_test_Y = trainY(:,1:3);
+
+
+% Initialize parameters  
+[K, ~] = size(grad_test_Y); % K = number of labels
+[d,n] = size(grad_test_X);
+nodes = [50 50 K]; % number of nodes in each layer
+bias = 0; 
+k = length(nodes);
+lambda = 0;
+
+rng(400)
+[W,b,gamma,beta] = initParams(k, nodes, n, d, bias);
+
+% Test classifier 
+%[P,H,mu,v,s,shat] = EvalClassifier(grad_test_X, W, b, gamma, beta);
+% [P,H] = EvalClassifier(trainX, W, b);
+
+[gradb, gradW, gradgamma, gradbeta] = ComputeGradients(grad_test_X,grad_test_Y,W,b,lambda,...
+    gamma, beta);
+
+NetParams.W = W; NetParams.b = b; NetParams.use_bn = true;
+NetParams.gammas = gamma; NetParams.betas = beta;
+
+Grads = ComputeGradsNumSlow(grad_test_X, grad_test_Y, NetParams, lambda, 1e-05);
+gradbRef = Grads.b; gradWRef = Grads.W;
+gradgammaRef = Grads.gammas; gradbetaRef = Grads.betas;
+
+% Check error
+eps = 1e-10;
+layer = 2;
+
+errorb = norm(gradbRef{layer}  - gradb{layer})/max(eps,norm(gradb{layer})+norm(gradbRef{layer}));
+errorW = norm(gradWRef{layer}  - gradW{layer})/max(eps,norm(gradW{layer})+norm(gradWRef{layer}));
+errorgamma = norm(gradgammaRef{layer}  - gradgamma{layer})/max(eps,norm(gradgamma{layer})+norm(gradgammaRef{layer}));
+errorbeta = norm(gradbetaRef{layer}  - gradbeta{layer})/max(eps,norm(gradbeta{layer})+norm(gradbetaRef{layer}));
+
+%% Perform minibatch step
+clc
+
+% Initialize parameters  
+[K, ~] = size(trainY); % K = number of labels
+[d,n] = size(trainX);
+%nodes = [50 30 20 20 10 10 10 10 K]; % number of nodes in each layer
+nodes = [50 50 K];
+bias = 0; 
+k = length(nodes);
+
+rng(400)
+[W,b,gamma,beta] = initParams(k, nodes, n, d, bias);
+
+% Set mini-batch parameters
+eta_min = 1e-5; eta_max = 1e-1; nbatch = 100; 
+ns = 5*45000/nbatch; lambda = 0.00651400417037734; cycles = 2;
+lambda = 0.005;
+
+% Store mini-batch parameters
+parameters.eta_min = eta_min; parameters.eta_max = eta_max;
+parameters.ns = ns; parameters.nbatch = nbatch; 
+parameters.cycles = cycles; parameters.lambda = lambda;
+
+[Wstar,bstar, losstrain, lossvalid, gammastar, betastar] = MiniBatch(trainX, trainY, validX, validY, ...
+    W, b, parameters, gamma, beta);
+
+acc_test = ComputeAccuracy(testX,testy, Wstar, bstar, gammastar, betastar); 
+
+% Plotting evolution of loss function
+plot(1:1:length(losstrain),losstrain, 1:1:length(lossvalid),lossvalid, 'LineWidth', 1.5)
+grid on
+xlabel('update step')
+ylabel('loss')
+ylim([0,3])
+legend('training', 'validation', 'FontSize', 30)
+title('Loss function - 3-layer network with batch normalization')
+set(gca,'FontSize', 30)
+set(gcf, 'Position',  [100, 100, 1000, 700]);
+%saveas(gcf,[pwd '/Resultpics/9layerbn.png']);
+
+%% Search for optimal lambda value 
+clc 
+
+% Initialize parameters  
+[K, ~] = size(trainY); % K = number of labels
+[d,n] = size(trainX);
+%nodes = [50 30 20 20 10 10 10 10 K]; % number of nodes in each layer
+nodes = [50 50 K];
+bias = 0; 
+k = length(nodes);
+
+rng(400)
+[W,b,gamma,beta] = initParams(k, nodes, n, d, bias);
+
+% Lambda search parameters
+l_min = log10(0.004); l_max = log10(0.006);
+no_values = 8;
+l = linspace(l_min, l_max, no_values);
+lambda = 10.^l;
+
+% Set mini-batch parameters
+eta_min = 1e-5; eta_max = 1e-1; nbatch = 100; 
+ns = 5*45000/nbatch; cycles = 2;
+
+% Store mini-batch parameters
+parameters.eta_min = eta_min; parameters.eta_max = eta_max;
+parameters.ns = ns; parameters.nbatch = nbatch; 
+parameters.cycles = cycles; parameters.lambda = lambda;
+
+
+acc_valid = zeros(1, no_values);
+acc_test = zeros(1, no_values);
+
+
+disp('Performing grid search')
+for i = 1:length(lambda)
+    disp(['iteration ', int2str(i)])
+    parameters.lambda = lambda(i); 
+    [Wstar,bstar, losstrain, lossvalid, gammastar, betastar] = MiniBatch(trainX, trainY, validX, validY, ...
+    W, b, parameters, gamma, beta);
+    acc_valid(i) = ComputeAccuracy(validX,validy, Wstar, bstar, gammastar, betastar);
+    acc_test(i) = ComputeAccuracy(testX,testy, Wstar, bstar, gammastar, betastar);
+end
+
+% Save results to file 
+T = table(lambda',acc_valid',acc_test');
+writetable(T,'gridSearch.txt','Delimiter',' ')  
+type 'gridSearch.txt'
+
+% best value found 
+% lambda = 0.00719685673001152, valid accuracy 54.84%
+% first search between 1e-5 and 1e-1
+% lambda = 0.00707204172194891, accuracy 55.12 %, 53.72% test acc
+
+%% Test sensitivity to initialization
+clc
+
+% Initialize parameters  
+[K, ~] = size(trainY); % K = number of labels
+[d,n] = size(trainX);
+%nodes = [50 30 20 20 10 10 10 10 K]; % number of nodes in each layer
+nodes = [50 50 K];
+bias = 0; 
+k = length(nodes);
+
+sig = 1e-1;
+
+rng(400)
+[W,b,gamma,beta] = initParams(k, nodes, n, d, bias, sig);
+
+% Set mini-batch parameters
+eta_min = 1e-5; eta_max = 1e-1; nbatch = 100; 
+ns = 5*45000/nbatch; lambda = 0.00651400417037734; cycles = 2;
+lambda = 0.005;
+
+% Store mini-batch parameters
+parameters.eta_min = eta_min; parameters.eta_max = eta_max;
+parameters.ns = ns; parameters.nbatch = nbatch; 
+parameters.cycles = cycles; parameters.lambda = lambda;
+
+[Wstar,bstar, losstrain, lossvalid, gammastar, betastar] = MiniBatch(trainX, trainY, validX, validY, ...
+    W, b, parameters, gamma, beta);
+
+acc_test = ComputeAccuracy(testX,testy, Wstar, bstar, gammastar, betastar); 
+
+% Plotting evolution of loss function
+plot(1:1:length(losstrain),losstrain, 1:1:length(lossvalid),lossvalid, 'LineWidth', 1.5)
+grid on
+xlabel('update step')
+ylabel('loss')
+ylim([0,3])
+legend('training', 'validation', 'FontSize', 30)
+title('Loss function - 3-layer network with batch normalization')
+set(gca,'FontSize', 30)
+set(gcf, 'Position',  [100, 100, 1000, 700]);
+%saveas(gcf,[pwd '/Resultpics/9layerbn.png']);

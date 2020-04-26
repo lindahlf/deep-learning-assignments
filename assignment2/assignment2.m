@@ -31,6 +31,7 @@ testX = testX ./ repmat(std_X, [1, size(testX, 2)]);
 nodes = 50; 
 bias = 0;
 
+
 rng(400)
 [W,b] = initParams(nodes, d, K, bias);
 [P,H] = EvalClassifier(trainX, W, b);
