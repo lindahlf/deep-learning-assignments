@@ -16,7 +16,7 @@ function [L, varargout] = ComputeLoss(X,Y,RNN,h0)
 
 % Import parameters
 W = RNN.W; U = RNN.U; b = RNN.b; V = RNN.V; 
-c = RNN.c; K = round(RNN.K); seql = round(RNN.seql); m = round(RNN.m);
+c = RNN.c; K = RNN.K; seql = RNN.seql; m = RNN.m;
 
 % a = W*h + U*X + b;
 % h = tanh(a);
@@ -28,13 +28,13 @@ c = RNN.c; K = round(RNN.K); seql = round(RNN.seql); m = round(RNN.m);
 a = zeros(m,seql); h = zeros(m,seql);
 o = zeros(K,seql); p = zeros(K,seql);
 
+h_curr = h0;
 
 for i = 1:seql
-    a(:,i) = W*h(:,i) + U*X(:,i) + b;
+    a(:,i) = W*h_curr + U*X(:,i) + b;
     h(:,i) = tanh(a(:,i));
     o(:,i) = V*h(:,i) + c;
-    p(:,i) = softmax(o(:,i));
-end
+    
     
 
 

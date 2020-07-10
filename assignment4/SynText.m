@@ -24,13 +24,13 @@ for t = 1:n
     o = V*h + c;
     p = softmax(o);
     
-    % Select new character
+    % Select new character based on highest probability
     cp = cumsum(p); 
     r = rand;
     ixs = find(cp-r > 0);
     ii = ixs(1);
     
-    Y(ii,t) = 1; %
+    Y(ii,t) = 1; % 
     x = Y(:,t); % xnext
 end
 

@@ -20,7 +20,7 @@ for i = 1:K
 end
 
 % Initialize parameters and store them in RNN
-m = 100;
+m = 5; % size of hidden state 
 RNN.m = m; RNN.K = K;
 RNN.b = zeros(m,1); 
 RNN.c = zeros(K,1);
@@ -41,7 +41,7 @@ RNN.eta = eta; RNN.seql = seq_length;
 X_chars = book_data(1:seq_length);
 Y_chars = book_data(2:seq_length+1);
 
-X = hotEnc(X_chars, char_to_ind); % Input vector 
+X = hotEnc(X_chars, char_to_ind); % Input vector (hotenc of input sequence
 Y = hotEnc(Y_chars, char_to_ind); % Target output vector
 
 h0 = zeros(m,1);
@@ -50,9 +50,17 @@ Ysyn = SynText(RNN,h0,X,seq_length); % Prediction of sequence
 testText = ConvertText(Ysyn, int_to_char);
 
 % Test ComputeLoss
-loss = ComputeLoss(X,Y, RNN,h0);  
+[loss, P] = ComputeLoss(X,Y,RNN,h0);  
 
 % Test gradients
 num_grads = ComputeGradsNum(X, Y, RNN, 1e-4);
+grads = ComputeGrads(X,Y,RNN, h0);
+
+% Check error
+eps = 1e-10;
+
+U_error = gradError(num_grads.U, grads.U, eps);
+W_error = gradError(num_grads.W, grads.W, eps);
+V_error = gradError(num_grads.V, grads.V, eps);
 
 
