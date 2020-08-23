@@ -19,13 +19,11 @@ h = h0; x = x0;
 Y = zeros(K,n);
 
 for t = 1:n
-    a = W*h + U*x + b;
-    h = tanh(a);
-    o = V*h + c;
-    p = softmax(o);
     
+    [~,H,~,P,~] = ForwardPass(x,Y,RNN,h,false);
     % Select new character based on highest probability
-    cp = cumsum(p); 
+    h = H(:,end);
+    cp = cumsum(P); 
     r = rand;
     ixs = find(cp-r > 0);
     ii = ixs(1);

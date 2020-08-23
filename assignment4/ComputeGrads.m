@@ -1,13 +1,13 @@
-function grads = ComputeGrads(X,Y,RNN,H)
+function [grads, varargout] = ComputeGrads(X,Y,RNN,hprev)
 % Compute gradients for RNN
 
 % Import parameters
 W = RNN.W; U = RNN.U; b = RNN.b; V = RNN.V; 
 c = RNN.c; K = RNN.K; seql = RNN.seql; m = RNN.m;
 
-[~,P,a,H] = ComputeLoss(X,Y,RNN,H);
+[~,P,a,H] = ComputeLoss(X,Y,RNN,hprev,false);
 
-G = -(Y-P)';
+G = -(Y-P)'; %dL/do
 
 grads.V = G'*H';
 
@@ -23,14 +23,16 @@ for i = seql-1:-1:1
 end
 
 dummy_H = zeros(m,seql); 
-dummy_H(:, 2:end) = H(:, 2:end); 
+dummy_H(:,1) = hprev;
+dummy_H(:, 2:end) = H(:, 1:end-1); 
 
 grads.W = da'*dummy_H'; 
-
 grads.U = da'*X';
 
+grads.b = sum(da)';
+grads.c = sum(G)';
 
-
+varargout{1} = H(:,end); 
 
 end
 
