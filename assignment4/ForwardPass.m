@@ -1,6 +1,18 @@
 function [A,H,O,P,L] = ForwardPass(X,Y,RNN,hprev,loss)
 % Performs forward pass of a the network given its parameters and a sequence of text
 
+% Inputs 
+% X = sequence of text
+% Y = targeted output text
+% RNN = struct with network parameters 
+% hprev = previous hidden layer
+% loss = boolean indicating if loss is to be computed
+
+% Returns: 
+% The intermediary matrices A,H, and O
+% P = matrix of probabilities for each character for each step
+% L = value of loss function
+
 W = RNN.W; U = RNN.U; V = RNN.V;
 b = RNN.b; c = RNN.c; 
 tau = size(X,2); m = round(RNN.m); K = round(RNN.K);

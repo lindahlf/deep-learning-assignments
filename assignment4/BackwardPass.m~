@@ -6,11 +6,7 @@ function grads = BackwardPass(X,Y,RNN,P,H,A)
 % Y = targeted output text
 % RNN = struct with network parameters 
 % P = matrix of probabilities for each character for each step
-% H = hidden layer 
-% A = Intermediate matrix A
-
-% Returns: 
-% grads = struct with all gradients 
+% H = hid
 
 
 
